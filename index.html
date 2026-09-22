@@ -12,6 +12,7 @@
         <script src = "https://cdn.jsdelivr.net/npm/cannon@0.6.2/build/cannon.min.js"></script>
     
     </head>
+	<!-- Blocks out scroll bar and adjusts screen size -->
     <style>
         body{
             overflow:hidden;
@@ -176,6 +177,7 @@ canvas.getContext = function(type, data) {
 				return cubeCollide(obj1.x, obj1.y, obj1.z, obj1.w, obj1.h, obj1.d, obj2.x, obj2.y, obj2.z, obj2.w, obj2.h, obj2.d);        
 			}
 
+			const diePoint = -20; // change this for the y point that he "respawns"
 			//a new player
 			let player = BABYLON.MeshBuilder.CreateBox("player", {width: 1, height: 1, depth: 1}, scene);
 			player.material = new BABYLON.StandardMaterial("BoxMaterial", scene);
@@ -207,14 +209,13 @@ canvas.getContext = function(type, data) {
 			shadowGenerator.addShadowCaster(player); 
 			
 			function die() {        
-					player.position.x = 0; 
-					player.position.y = 0; 
-					player.position.z = 0;   
-					frame = 0;
+				player.position.x = 0; 
+				player.position.y = 0; 
+				player.position.z = 0;  
 			}
 			die();
 			function win() {
-				die();
+				die(); //reset
 				player.position.y = -20;
 			}
 						 
@@ -276,19 +277,21 @@ canvas.getContext = function(type, data) {
 					}
 					
 					//if we fell
-					if(player.position.y < -20) {
+					if(player.position.y < diePoint) {
 						die();
 					}
 
 					click = false;
 			});
+			//locks pointer
 			function pointerLock(){
-					canvas.requestPointerLock();
-					click = true;
+				canvas.requestPointerLock();
+				click = true;
 			}
 			//lock 'em up tight
 			document.addEventListener("click", pointerLock);
-			
+
+			//and return it all back
 			return scene;
 	}
 	//basically redfine everything
