@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+
+<!-- Hunter.js library-->
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>platformer wip</title>
+				<!-- Import babylon and cannon.js -->
+        <script src = 'https://cdn.jsdelivr.net/npm/babylonjs@6.23.0/babylon.min.js'></script>
+        <script src = "https://cdn.jsdelivr.net/npm/cannon@0.6.2/build/cannon.min.js"></script>
+    
+    </head>
+    <style>
+        body{
+            overflow:hidden;
+            margin:0;
+        }
+				/* auto sizing */
+        #renderCanvas {
+          width: 100%;
+          height: 100%;
+          display: block;
+        }
+    </style>
+		<!-- Main js code -->
+    <script>
+
+//helps with the lag
+window.addEventListener('DOMContentLoaded', function(){
+	const canvas = document.getElementById("renderCanvas");
+	const engine = new BABYLON.Engine(canvas, true, {
+		stencil: false,
+		lowQuality: true,
+		antialias: false, 
+		preserveDrawingBuffer: false
+});
+//as the name suggests, resize canvas. Or rather, size the engine to fit the canvas
+function resizeCanvas() {
+	canvas.width = window.innerWidth;
+	canvas.height = window.innerHeight;
+	engine.resize();
+}
+
+// Run on load and whenever the user resizes the window
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
+
+//stuff
+canvas.getContext = function(type, data) {
+	data.preserveDrawingBuffer = true;
+	return HTMLCanvasElement.prototype.getContext.call(canvas, type, data);
+}
+	
+	function run(){
+			const scene = new BABYLON.Scene(engine);//new scene
+			
+			//From now on all the code will go here
+			const gravityVector = new BABYLON.Vector3(0,-10,0);
+			scene.enablePhysics(gravityVector, new BABYLON.CannonJSPlugin());
+
+			//for key inputs
+			var keys = {};
+			window.addEventListener('keydown', function(e) {
+					keys[e.key] = true;
+			});
+			window.addEventListener('keyup', function(e) {
+					keys[e.key] = false;
+			});
+	
+			//background color
+			//all BABYLON.color3() is a fraction 1, instead of 255. So, you can divide your normal rbg values by 255. There is no Alpha
+			scene.clearColor = new BABYLON.Color3(0, 0.804, 1);
+
+			
+			
+			//lighting
+			const ambientLight = new BABYLON.HemisphericLight("ambient", new BABYLON.Vector3(0, 400, 0), scene);
+			ambientLight.intensity = 0.3;
+			const light = new BABYLON.DirectionalLight("dirLight", new BABYLON.Vector3(-0.2, -5000, 0.2), scene);
+			light.position = new BABYLON.Vector3(20, 40, 20); //for shadows
+
+			const shadowGenerator = new BABYLON.ShadowGenerator(256, light);
+
+			
+			let cubes = [];
+			
+			//3D function
+			function new3D(config, type){
+					let obj = {
+							x: config.x || 0,
+							y: config.y || 0,
+							z: config.z || 0,
+							w: config.w || 1,
+							h: config.h || 1,
+							d: config.d || 1,
+							xRot: config.xRot || 0,
+							yRot: config.yRot || 0,
+							zRot: config.zRot || 0,
+							clr: config.clr || [255, 0, 0],
+							mass: config.mass || 0,
+							friction: config.friction || 0.3,
+							restitution: config.restitution || 0,
+							glow: config.glow || false,
+							glowPower: config.glowPower || 0,
+							roughness: config.roughness || 0,
+							metallic: config.metallic || 0,
+							physics: config.physics || false,
+							type: config.type || "cube",
+							material: config.material || "standard",
+							d: config.d || 1,
+							seg: config.seg || 10,
+							dt: config.dt || 1,
+							db: config.db || 1,
+							sleep: config.sleep || false,
+							glow: config.glow || false,
+							message: config.message || "",
+							speed: config.speed || 0,
+							lngth: config.lngth || 5,
+							far: 0,
+							//makeShadow = config.makeShadow || false,
+							//haveShadow = !config.haveShadow || false,
+					};
+					let Obj;
+					switch(obj.type) {
+							case "cylinder":
+									Obj = BABYLON.MeshBuilder.CreateCylinder("cylinder", {height: obj.h, diameterTop: obj.dt, diameterBottom: obj.db}, scene);
+							Obj.material = new BABYLON.StandardMaterial("cylinderMaterial", scene);
+							break;
+							case "sphere":
+									Obj = BABYLON.MeshBuilder.CreateSphere('sphere', {segments: obj.seg, diameter: obj.d}, scene);
+									Obj.material = new BABYLON.StandardMaterial("sphereMaterial", scene);
+									
+							break;
+							default:
+								Obj = BABYLON.MeshBuilder.CreateBox('Box', {width: obj.w, height: obj.h, depth: obj.d}, scene);
+						Obj.material = new BABYLON.StandardMaterial("BoxMaterial", scene);
+						if(obj.mass === 0 ) {
+							cubes.push({
+								x: obj.x,
+								y: obj.y,
+								z: obj.z,
+								w: obj.w,
+								h: obj.h,
+								d: obj.d,
+								type: type || "ground", //default to ground
+								squeeze: 1,
+								message: obj.message,
+							});
+						}
+							
+					}
+					Obj.material.diffuseColor = new BABYLON.Color3(obj.clr[0] / 255, obj.clr[1] / 255, obj.clr[2] / 255);
+					Obj.position = new BABYLON.Vector3(obj.x, obj.y, obj.z);
+					Obj.rotation = new BABYLON.Vector3(obj.xRot, obj.yRot, obj.zRot);
+					
+					if(obj.physics) {
+							//put in switch
+							Obj.physicsImpostor = new BABYLON.PhysicsImpostor(Obj, BABYLON.PhysicsImpostor.BoxImpostor, obj, scene);
+					}
+					if(obj.sleep) {
+						Obj.sleep();
+					}
+					if(obj.makeShadow) {
+						shadowGenerator.addShadowCaster(Obj); 
+					}
+					if(!obj.haveShadow) {
+						Obj.receiveShadows = true;
+					}
+					if(obj.glow) {
+						const material = new BABYLON.StandardMaterial("glowMat", scene);
+						material.emissiveColor = new BABYLON.Color3(obj.clr[0] / 255, obj.clr[1] / 255, obj.clr[2] / 255);
+						Obj.material = material;
+						glowLayer.addIncludedOnlyMesh(Obj);
+					}
+					Obj.speed = obj.speed;
+			Obj.lngth = obj.lngth;
+					Obj.far = obj.far;
+					return Obj;
+			}
+			function cubeCollide(p1X, p1Y, p1Z, p1W, p1H, p1D, p2X, p2Y, p2Z, p2W, p2H, p2D){
+					return(p1X + p1W / 2 > p2X - p2W && p1X - p1W / 2 < p2X + p2W && p1Y + p1H / 2 > p2Y - p2H && p1Y - p1H / 2 < p2Y + p2H && p1Z + p1D / 2 > p2Z - p2D && p1Z - p1D / 2 < p2Z + p2D); 
+			}
+			
+			function cubesCollide(obj1, obj2) {
+				return cubeCollide(obj1.x, obj1.y, obj1.z, obj1.w, obj1.h, obj1.d, obj2.x, obj2.y, obj2.z, obj2.w, obj2.h, obj2.d);        
+			}
+
+			//a new player
+			let player = BABYLON.MeshBuilder.CreateBox("player", {width: 1, height: 1, depth: 1}, scene);
+			player.material = new BABYLON.StandardMaterial("BoxMaterial", scene);
+			player.material.diffuseColor = new BABYLON.Color3(255 / 255, 147 / 255, 0);
+			player.physicsImpostor = new BABYLON.PhysicsImpostor(player, BABYLON.PhysicsImpostor.BoxImpostor, {mass: 1, restitution: 0.0}, scene);
+			
+			var plr = {
+					x: player.position.x,
+					y: player.position.y,
+					z: player.position.z,
+					w: 1.5,
+					h: 1.5,
+					d: 1.5,
+			};
+			
+			let canJump = true;
+	
+			
+			
+			const camera = new BABYLON.ArcRotateCamera("Camera",
+					Math.PI / 2,
+					Math.PI / 3,
+					20,
+					player.position,
+					scene);
+			camera.lowerRadiusLimit = 5;
+			camera.upperRadiusLimit = 20;
+			camera.attachControl(canvas, true); 
+
+			shadowGenerator.addShadowCaster(player); 
+			
+			function die() {        
+					player.position.x = 0; //9
+					player.position.y = 0; //5
+					player.position.z = 0;  //-65   
+					frame = 0;
+			}
+			die();
+			function win() {
+				die();
+					player.position.y = -20;
+				msgDiv.textContent = "LOL NOPE";
+					wonDiv.textContent = "You won! With ";
+			}
+						 
+			
+			//world
+			new3D({x: 0, y: -4, z: 0, physics: true, mass: 0, type: "cube", w: 15, h: 0.8, d: 15, clr: [100, 100, 100], message: "Welcome! WASD to move, Sapce to jump",});
+			
+			
+			//this is our "draw" function 
+			scene.registerAfterRender(function() {			
+					
+					//damping
+					var vel = player.physicsImpostor.getLinearVelocity();
+					player.physicsImpostor.setLinearVelocity(vel.scale(.95));
+
+					plr.x = player.position.x;//update coors
+					plr.y = player.position.y;
+					plr.z = player.position.z;
+					
+									
+					
+					//finds camera stuff
+					var forward = camera.getFrontPosition(1).subtract(camera.position);
+					forward.y = 0;
+					forward = forward.normalize().scale(0.7);
+
+					var backward = BABYLON.Vector3.TransformCoordinates(forward, BABYLON.Matrix.RotationY(Math.PI));
+					var left = BABYLON.Vector3.TransformCoordinates(forward, BABYLON.Matrix.RotationY((3 * Math.PI) / 2));
+					var right = BABYLON.Vector3.TransformCoordinates(forward, BABYLON.Matrix.RotationY(Math.PI / 2));
+					
+					//key movements
+					if (keys.w) { 
+							player.applyImpulse(forward, player.getAbsolutePosition());
+					}
+					if (keys.s) {
+							player.applyImpulse(backward, player.getAbsolutePosition());
+					}
+					if (keys.a) {
+							player.applyImpulse(left, player.getAbsolutePosition());
+					}
+					if (keys.d) {
+							player.applyImpulse(right, player.getAbsolutePosition());
+					}
+					camera.setTarget(player.position.clone());
+					
+					//special blocks (very very messy!)
+					for (let i = 0; i < cubes.length; i++) {
+							if (cubes[i].type === "lava" && cubesCollide(plr, cubes[i])) {
+									die();
+									break;
+							}
+							if (cubes[i].type === "trampoline" && cubesCollide(plr, cubes[i])) {
+								player.applyImpulse(new BABYLON.Vector3(0, 35, 0), player.getAbsolutePosition());   
+									cubes[i].squeeze = 1.5;
+							}
+							if (cubes[i].type === "gold" && cubesCollide(plr, cubes[i])) {
+								wonDiv.textContent = Math.floor(f / 60) + ":" + Math.floor(f % 60) + ":" + Math.floor(frame % 60);
+									win();
+									
+									break;
+							}
+							if (cubes[i].type === "portal1" && cubesCollide(plr, cubes[i])) {
+									player.position.y = 25;
+							}
+							if (cubesCollide(plr, cubes[i])) {
+								msgDiv.textContent = cubes[i].message;
+									
+							}
+							if(cubes[i].squeeze > 1) {
+								cubes[i].squeeze --;
+							}
+					}
+					
+					//raycast for collisions
+					var origin = player.getAbsolutePosition().clone();
+					var ray = new BABYLON.Ray(origin, new BABYLON.Vector3(0, -1, 0), 0.8); // reach just below feet
+					var hit = scene.pickWithRay(ray, function(mesh) {
+							return mesh.isPickable && mesh !== player;
+					});
+					
+					//can he jump
+					canJump = !!(hit && hit.hit);
+					
+					if (keys[' '] && canJump){
+							player.applyImpulse(new BABYLON.Vector3(0, 20, 0), player.getAbsolutePosition());
+					}
+					
+					//if we fell
+					if(player.position.y < -20) {
+						die();
+					}
+
+					click = false;
+			});
+			function pointerLock(){
+					canvas.requestPointerLock();
+					click = true;
+			}
+			//lock 'em up tight
+			document.addEventListener("click", pointerLock);
+			
+			return scene;
+	}
+	//basically redfine everything
+	const scene = run();
+
+	//this tells BABYLON to hurry up and render already
+	engine.runRenderLoop(function(){
+			scene.render();
+	});
+});
+    </script>
+     
+    <body>
+        <canvas id = "renderCanvas"></canvas>
+    </body>
+</html>
