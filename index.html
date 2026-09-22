@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 
 <!-- Hunter.js library-->
+<!-- Created by Ikorac for anybody to use -->
 
 <html>
     <head>
         <meta charset="utf-8">
         <title>platformer wip</title>
-				<!-- Import babylon and cannon.js -->
+			<!-- Import babylon and cannon.js -->
         <script src = 'https://cdn.jsdelivr.net/npm/babylonjs@6.23.0/babylon.min.js'></script>
         <script src = "https://cdn.jsdelivr.net/npm/cannon@0.6.2/build/cannon.min.js"></script>
     
@@ -16,14 +17,14 @@
             overflow:hidden;
             margin:0;
         }
-				/* auto sizing */
+			/* auto sizing */
         #renderCanvas {
           width: 100%;
           height: 100%;
           display: block;
         }
     </style>
-		<!-- Main js code -->
+	<!-- Main js code -->
     <script>
 
 //helps with the lag
@@ -86,7 +87,7 @@ canvas.getContext = function(type, data) {
 			let cubes = [];
 			
 			//3D function
-			function new3D(config, type){
+			function new3D(config){
 					let obj = {
 							x: config.x || 0,
 							y: config.y || 0,
@@ -114,10 +115,6 @@ canvas.getContext = function(type, data) {
 							db: config.db || 1,
 							sleep: config.sleep || false,
 							glow: config.glow || false,
-							message: config.message || "",
-							speed: config.speed || 0,
-							lngth: config.lngth || 5,
-							far: 0,
 							//makeShadow = config.makeShadow || false,
 							//haveShadow = !config.haveShadow || false,
 					};
@@ -134,20 +131,17 @@ canvas.getContext = function(type, data) {
 							break;
 							default:
 								Obj = BABYLON.MeshBuilder.CreateBox('Box', {width: obj.w, height: obj.h, depth: obj.d}, scene);
-						Obj.material = new BABYLON.StandardMaterial("BoxMaterial", scene);
-						if(obj.mass === 0 ) {
-							cubes.push({
-								x: obj.x,
-								y: obj.y,
-								z: obj.z,
-								w: obj.w,
-								h: obj.h,
-								d: obj.d,
-								type: type || "ground", //default to ground
-								squeeze: 1,
-								message: obj.message,
-							});
-						}
+								Obj.material = new BABYLON.StandardMaterial("BoxMaterial", scene);
+								if(obj.mass === 0 ) {
+									cubes.push({
+										x: obj.x,
+										y: obj.y,
+										z: obj.z,
+										w: obj.w,
+										h: obj.h,
+										d: obj.d,
+									});
+								}
 							
 					}
 					Obj.material.diffuseColor = new BABYLON.Color3(obj.clr[0] / 255, obj.clr[1] / 255, obj.clr[2] / 255);
@@ -155,8 +149,7 @@ canvas.getContext = function(type, data) {
 					Obj.rotation = new BABYLON.Vector3(obj.xRot, obj.yRot, obj.zRot);
 					
 					if(obj.physics) {
-							//put in switch
-							Obj.physicsImpostor = new BABYLON.PhysicsImpostor(Obj, BABYLON.PhysicsImpostor.BoxImpostor, obj, scene);
+						Obj.physicsImpostor = new BABYLON.PhysicsImpostor(Obj, BABYLON.PhysicsImpostor.BoxImpostor, obj, scene);
 					}
 					if(obj.sleep) {
 						Obj.sleep();
@@ -173,9 +166,6 @@ canvas.getContext = function(type, data) {
 						Obj.material = material;
 						glowLayer.addIncludedOnlyMesh(Obj);
 					}
-					Obj.speed = obj.speed;
-			Obj.lngth = obj.lngth;
-					Obj.far = obj.far;
 					return Obj;
 			}
 			function cubeCollide(p1X, p1Y, p1Z, p1W, p1H, p1D, p2X, p2Y, p2Z, p2W, p2H, p2D){
@@ -201,8 +191,7 @@ canvas.getContext = function(type, data) {
 					d: 1.5,
 			};
 			
-			let canJump = true;
-	
+			let canJump = true;	
 			
 			
 			const camera = new BABYLON.ArcRotateCamera("Camera",
@@ -218,17 +207,15 @@ canvas.getContext = function(type, data) {
 			shadowGenerator.addShadowCaster(player); 
 			
 			function die() {        
-					player.position.x = 0; //9
-					player.position.y = 0; //5
-					player.position.z = 0;  //-65   
+					player.position.x = 0; 
+					player.position.y = 0; 
+					player.position.z = 0;   
 					frame = 0;
 			}
 			die();
 			function win() {
 				die();
-					player.position.y = -20;
-				msgDiv.textContent = "LOL NOPE";
-					wonDiv.textContent = "You won! With ";
+				player.position.y = -20;
 			}
 						 
 			
@@ -271,48 +258,21 @@ canvas.getContext = function(type, data) {
 					if (keys.d) {
 							player.applyImpulse(right, player.getAbsolutePosition());
 					}
-					camera.setTarget(player.position.clone());
+					camera.setTarget(player.position.clone());//target the player
 					
-					//special blocks (very very messy!)
-					for (let i = 0; i < cubes.length; i++) {
-							if (cubes[i].type === "lava" && cubesCollide(plr, cubes[i])) {
-									die();
-									break;
-							}
-							if (cubes[i].type === "trampoline" && cubesCollide(plr, cubes[i])) {
-								player.applyImpulse(new BABYLON.Vector3(0, 35, 0), player.getAbsolutePosition());   
-									cubes[i].squeeze = 1.5;
-							}
-							if (cubes[i].type === "gold" && cubesCollide(plr, cubes[i])) {
-								wonDiv.textContent = Math.floor(f / 60) + ":" + Math.floor(f % 60) + ":" + Math.floor(frame % 60);
-									win();
-									
-									break;
-							}
-							if (cubes[i].type === "portal1" && cubesCollide(plr, cubes[i])) {
-									player.position.y = 25;
-							}
-							if (cubesCollide(plr, cubes[i])) {
-								msgDiv.textContent = cubes[i].message;
-									
-							}
-							if(cubes[i].squeeze > 1) {
-								cubes[i].squeeze --;
-							}
-					}
 					
 					//raycast for collisions
 					var origin = player.getAbsolutePosition().clone();
 					var ray = new BABYLON.Ray(origin, new BABYLON.Vector3(0, -1, 0), 0.8); // reach just below feet
 					var hit = scene.pickWithRay(ray, function(mesh) {
-							return mesh.isPickable && mesh !== player;
+						return mesh.isPickable && mesh !== player;
 					});
 					
 					//can he jump
 					canJump = !!(hit && hit.hit);
 					
 					if (keys[' '] && canJump){
-							player.applyImpulse(new BABYLON.Vector3(0, 20, 0), player.getAbsolutePosition());
+						player.applyImpulse(new BABYLON.Vector3(0, 20, 0), player.getAbsolutePosition());
 					}
 					
 					//if we fell
